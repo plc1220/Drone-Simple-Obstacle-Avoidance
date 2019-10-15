@@ -62,20 +62,21 @@ while vehicle.mode.name !=('LAND'or'RTL'):
     print("Mode: %s" % vehicle.mode.name)
 # Simulate Obstacle avoidance
     i=0
-    for measurement in lidar.iter_measurments():
+    for measurement in lidar.iter_measurments(max_buf_meas=500):
         a = measurement[2]
         dRaw = (measurement[3])/10
         d = round(dRaw)
+        print(dRaw)
         print(d)
         print(a)
 
         o = int(orientation(a))
         print(o)
-        if d>=0:
+        if (d>=20):
             i+=1
             print('ok'+str(i))
             sensor_data(int(d),o)
-        else:
+        elif (0<d<20):
 # Override RC, Channel 5(Flight Mode)
 ##print('set Flight Mode to RTL')
 ##t_end = time.time() + 60 * 5
@@ -92,5 +93,8 @@ while vehicle.mode.name !=('LAND'or'RTL'):
             vehicle.mode = VehicleMode('RTL')
             time.sleep(10)
         if vehicle.mode.name =='LAND':
+            print('Landing Mode, obstacle avoidance diabled')
+            lidar.stop()
+            lidar.disconnect()
             break
     break
