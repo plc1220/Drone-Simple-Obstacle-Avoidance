@@ -41,11 +41,16 @@ def record():
     try:
         for measurement in lidar.iter_measurments():
             print(measurement)
+            dRaw = (measurement[3])/10
+            d = round(dRaw)
             a = measurement[2]
             o=orientation(a)
 
+            print(a)
             print(o)
-            
+            print(dRaw)
+            print(d)
+            time.sleep(1)
     except KeyboardInterrupt:
         print('Stoping.')
     lidar.stop()
