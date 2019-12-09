@@ -1,2 +1,2 @@
 # Oryctes-Obstacle_Avoidance-
-Obstacle avoidance functionality developed using rplidar and dronekit libraries.
+Obstacle avoidance functionality developed using dronekit libraries.
