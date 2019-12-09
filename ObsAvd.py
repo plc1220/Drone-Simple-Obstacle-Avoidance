@@ -1,13 +1,14 @@
 from dronekit import connect, VehicleMode
-import sys
-from rplidar import RPLidar
-import time
-import math
+from smbus import SMBus
+from time import sleep
 
-# Connect to Mission Planner SITL
-vehicle = connect("/dev/ttyACM0",wait_ready=True)
-#vehicle = connect("10.10.2.163:14553",wait_ready=True)
+# Connect to Vehicle
+#vehicle = connect("/dev/ttyACM0",wait_ready=True)
+vehicle = connect("10.10.3.88:14553",wait_ready=True)
 #vehicle = connect("192.168.0.109:14552",wait_ready=True)
+
+# Defining sensor
+i2cbus = SMBus(1)
 
 # Defining distance sensor mavlink message generation function
 def sensor_data(d,o):
@@ -23,67 +24,19 @@ def sensor_data(d,o):
         )
     vehicle.send_mavlink(msg)
     
-# Defining distance sensor data classification
-def orientation(a):    
-    global o
-    if (0<= a and a< 22.5):
-        o = 0
-
-    elif (22.5<= a and a<67.5):
-        o = 1
-
-    elif (67.5<= a and a< 112.5):
-        o = 2
-
-    elif (112.5<= a and a<157.5):
-        o = 3
-
-    elif (157.5<= a and a<202.5):
-        o = 4
-
-    elif (202.5<= a and a< 247.5):
-        o = 5
-
-    elif (247.5<= a and a<292.5):
-        o = 6
-
-    elif (292.5<= a and a<337.5):
-        o = 7
+# Defining sensor function
+def sensor():
+    while 1:
+        i2cbus.write_byte(0x70, 0x51)
+        sleep(0.12)
+        val = i2cbus.read_word_data(0x70, 0xe1)
+        d = ((val >> 8) & 0xff | (val << 7) & 0x7ff)
         
-    elif (337.5<=a and a<360):
-        o = 0
-    return (o)
-
-# Defining connect to lidar function
-def connect():
-    global lidar
-    PORT_NAME = '/dev/ttyUSB0'
-    lidar = RPLidar(PORT_NAME)
-    lidar.clear_input()
-    health = lidar.get_health()
-    print(health)
-
-# Defining obstacle avoidance function
-def Avoidance():
-    i=0
-    for measurement in lidar.iter_measurments(max_buf_meas=80):
-        a = measurement[2]
-        dRaw = (measurement[3])/10
-        d = round(dRaw)
-        # Cal orientation
-        o = int(orientation(a))
-        
-        if (d>=200):
-            i+=1
-            print('ok'+str(i))
-            sensor_data(int(d),o)
-        elif (30<d<200):
+        if (d < 50):
             print(d)
-            lidar.stop()
-            lidar.stop_motor()
-            lidar.reset()
-            lidar.disconnect()
             break
+        else :
+            sensor_data(int(d),0)
 
 # Defining function after break
 def Waiting():
@@ -99,7 +52,7 @@ def Waiting():
         print("Mode: %s" % vehicle.mode.name)
         vehicle.mode = VehicleMode('RTL')
         time.sleep(5)
-    
+
 # Wait for arming
 
 while not vehicle.armed:      
@@ -110,14 +63,11 @@ print('Vehicle armed, initialising obstacle avoidance in 10s')
 time.sleep(5)
 
 # Function
-
 while 1:  
     if vehicle.mode.name =='LAND':
         print('Landing mode engaged, Obstacle avoidance disabled')
         break
-    connect()
-    time.sleep(5)
-    Avoidance()   
+    sensor()   
     if vehicle.mode.name =='LAND':
         print('Landing mode engaged, Obstacle avoidance disabled')
         break
@@ -125,4 +75,3 @@ while 1:
     time.sleep(1)
     print("Obstacle detected!, Flight mode forced: %s" % vehicle.mode.name)
     Waiting()
-
